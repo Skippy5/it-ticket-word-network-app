@@ -1,0 +1,13 @@
+# Keep the deployment upload (and the function bundle) lean.
+.venv
+.venv-slim
+__pycache__
+*.pyc
+.claude
+network.html
+out_*.html
+Dockerfile
+README.md
+app.py
+cli.py
+requirements-streamlit.txt

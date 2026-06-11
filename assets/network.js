@@ -27,6 +27,25 @@
     return e;
   }
 
+  function cssVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  /* Canvas-drawn colors come from the same --wn-* variables network.css uses,
+     so the graph follows the host page's light/dark theme. Re-read on every
+     call: the host toggles <html data-theme> then calls refreshTheme(). */
+  function themeColors() {
+    return {
+      label: cssVar("--wn-node-label", "#1c2733"),
+      labelStroke: cssVar("--wn-canvas", "#fafbfc"),
+      edge: cssVar("--wn-edge", "#b8c1cc"),
+      edgeHighlight: cssVar("--wn-edge-highlight", "#444455"),
+      fade: cssVar("--wn-fade", "#e3e7eb"),
+      fadeLabel: cssVar("--wn-fade-label", "#b9c0c8"),
+    };
+  }
+
   const WRAP_HTML =
     '<div class="wn-wrap">' +
     '  <div class="wn-graphbox">' +
@@ -78,15 +97,16 @@
       return box;
     }
 
+    let TH = themeColors();
     const nodeItems = DATA.nodes.map((n) => ({
       id: n.id, label: n.label, value: n.value, title: nodeTooltip(n),
       color: { background: n.color, border: n.color,
                highlight: { background: n.color, border: "#222" } },
-      font: { size: 16, color: "#1c2733", strokeWidth: 4, strokeColor: "#fafbfc" },
+      font: { size: 16, color: TH.label, strokeWidth: 4, strokeColor: TH.labelStroke },
     }));
     const edgeItems = DATA.edges.map((e) => ({
       id: e.id, from: e.from, to: e.to, value: e.value, title: edgeTooltip(e),
-      color: { color: "#b8c1cc", highlight: "#445", opacity: 0.75 },
+      color: { color: TH.edge, highlight: TH.edgeHighlight, opacity: 0.75 },
     }));
 
     const nodes = new global.vis.DataSet(nodeItems);
@@ -200,17 +220,28 @@
     resetPanel();
 
     /* ---------- neighborhood highlight ---------- */
-    const FADE = { background: "#e3e7eb", border: "#e3e7eb" };
     function highlight(centerIds) {
       const keep = new Set(centerIds);
+      const fade = { background: TH.fade, border: TH.fade };
       centerIds.forEach((id) => network.getConnectedNodes(id).forEach((n) => keep.add(n)));
       nodes.update(DATA.nodes.map((n) => keep.has(n.id)
-        ? { id: n.id, color: { background: n.color, border: n.color }, font: { color: "#1c2733" } }
-        : { id: n.id, color: FADE, font: { color: "#b9c0c8" } }));
+        ? { id: n.id, color: { background: n.color, border: n.color }, font: { color: TH.label } }
+        : { id: n.id, color: fade, font: { color: TH.fadeLabel } }));
     }
     function unhighlight() {
       nodes.update(DATA.nodes.map((n) =>
-        ({ id: n.id, color: { background: n.color, border: n.color }, font: { color: "#1c2733" } })));
+        ({ id: n.id, color: { background: n.color, border: n.color }, font: { color: TH.label } })));
+    }
+
+    /* Re-read the --wn-* variables (after the host toggled data-theme) and
+       restyle everything that is drawn on the canvas. */
+    function refreshTheme() {
+      TH = themeColors();
+      unhighlight();
+      nodes.update(DATA.nodes.map((n) =>
+        ({ id: n.id, font: { color: TH.label, strokeColor: TH.labelStroke } })));
+      edges.update(DATA.edges.map((e) =>
+        ({ id: e.id, color: { color: TH.edge, highlight: TH.edgeHighlight, opacity: 0.75 } })));
     }
 
     network.on("click", (params) => {
@@ -238,7 +269,7 @@
       if (!DATA.physics) network.setOptions({ physics: { enabled: false } });
     });
 
-    return { network, nodes, edges, showNode, showEdge, highlight, unhighlight };
+    return { network, nodes, edges, showNode, showEdge, highlight, unhighlight, refreshTheme };
   }
 
   global.mountNetwork = mountNetwork;

@@ -20,7 +20,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+from english_stopwords import ENGLISH_STOP_WORDS
 
 import config
 

@@ -1,9 +1,15 @@
 """Co-occurrence matrix + graph construction.
 
-Vectorized as required: a binary documents x terms sparse matrix, then
-``X.T @ X`` yields the full term-term co-occurrence matrix in one shot.
-Optional sliding-window scope for longer notes. Edge weights are raw
-co-document counts or positive PMI.
+Vectorized as required: a binary documents x terms matrix, then ``X.T @ X``
+yields the full term-term co-occurrence matrix in one shot. Optional
+sliding-window scope for longer notes. Edge weights are raw co-document
+counts or positive PMI.
+
+numpy-only (no scipy): the vocabulary is pruned to the top ``max_nodes``
+terms (<= a few hundred) BEFORE the matrix is built, so the dense
+docs x terms matrix stays tiny — e.g. 10,000 tickets x 250 terms is 2.5 MB
+of uint8 — and the matmul is instant. Dropping scipy/scikit-learn keeps the
+serverless (Vercel) deployment bundle far under the platform size limit.
 """
 
 from __future__ import annotations
@@ -12,7 +18,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import networkx as nx
-from scipy import sparse
 
 
 @dataclass
@@ -23,25 +28,24 @@ class GraphResult:
     n_docs: int
 
 
-def _binary_doc_term_matrix(docs: list[list[str]], vocab: dict[str, int]) -> sparse.csr_matrix:
-    rows, cols = [], []
+def _binary_doc_term_matrix(docs: list[list[str]], vocab: dict[str, int]) -> np.ndarray:
+    """Binary (0/1) docs x terms matrix as a small dense numpy array."""
+    X = np.zeros((len(docs), len(vocab)), dtype=np.int32)
     for i, tokens in enumerate(docs):
-        seen = {vocab[t] for t in tokens if t in vocab}
-        rows.extend([i] * len(seen))
-        cols.extend(seen)
-    data = np.ones(len(rows), dtype=np.int32)
-    return sparse.csr_matrix(
-        (data, (rows, cols)), shape=(len(docs), len(vocab)), dtype=np.int32
-    )
+        for t in set(tokens):
+            j = vocab.get(t)
+            if j is not None:
+                X[i, j] = 1
+    return X
 
 
 def _window_pair_counts(
     docs: list[list[str]], vocab: dict[str, int], window: int
-) -> sparse.csr_matrix:
+) -> np.ndarray:
     """Sliding-window co-occurrence: pair counted once per document if the two
     terms appear within `window` tokens of each other."""
     n = len(vocab)
-    rows, cols = [], []
+    C = np.zeros((n, n), dtype=np.int32)
     for tokens in docs:
         idx = [(pos, vocab[t]) for pos, t in enumerate(tokens) if t in vocab]
         pairs = set()
@@ -54,11 +58,8 @@ def _window_pair_counts(
                 if term_a != term_b:
                     pairs.add((min(term_a, term_b), max(term_a, term_b)))
         for i, j in pairs:
-            rows.append(i)
-            cols.append(j)
-    data = np.ones(len(rows), dtype=np.int32)
-    m = sparse.coo_matrix((data, (rows, cols)), shape=(n, n)).tocsr()
-    return m + m.T
+            C[i, j] += 1
+    return C + C.T
 
 
 def build_graph(
@@ -70,7 +71,7 @@ def build_graph(
     min_term_freq: int = 3,
     min_edge_weight: float = 2.0,
     max_nodes: int = 140,
-    max_edges_per_node: int = 10,
+    max_edges_per_node: int = 14,
 ) -> GraphResult:
     """Build the pruned term co-occurrence graph.
 
@@ -103,25 +104,24 @@ def build_graph(
             if t in vocab:
                 term_tickets[t].append(tid)
 
-    # --- co-occurrence matrix ---------------------------------------------
+    # --- co-occurrence matrix (X.T @ X, vectorized) -----------------------
     X = _binary_doc_term_matrix(docs, vocab)
     if scope == "window":
         C = _window_pair_counts(docs, vocab, window_size)
     else:
-        C = (X.T @ X).tocsr()
-    C.setdiag(0)
-    C.eliminate_zeros()
+        C = X.T @ X
+    np.fill_diagonal(C, 0)
 
-    doc_freq = np.asarray(X.sum(axis=0)).ravel().astype(np.float64)
+    doc_freq = X.sum(axis=0).astype(np.float64)
 
     # --- edge weights ------------------------------------------------------
     graph = nx.Graph()
     for term in kept:
         graph.add_node(term, freq=int(df[term]))
 
-    C_coo = sparse.triu(C, k=1).tocoo()
-    for i, j, count in zip(C_coo.row, C_coo.col, C_coo.data):
-        count = float(count)
+    upper_i, upper_j = np.nonzero(np.triu(C, k=1))
+    for i, j in zip(upper_i.tolist(), upper_j.tolist()):
+        count = float(C[i, j])
         if weighting == "pmi":
             # positive PMI over document co-occurrence probabilities
             p_ij = count / n_docs

@@ -5,10 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IT Ticket Word Co-occurrence Network</title>
 
+  <!-- Theme bootstrap: set the attribute before stylesheets paint to avoid a
+       flash. Saved preference wins; otherwise follow the OS setting. -->
+  <script>
+    (function () {
+      var t;
+      try { t = localStorage.getItem("wordnet-theme"); } catch (e) {}
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark" : "light";
+      }
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+
   <!-- Shared network component (same renderer the Streamlit build uses) -->
   <link rel="stylesheet" href="/assets/network.css" />
   <!-- Frontend chrome -->
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/web/styles.css" />
   <!-- vis-network (inlined offline copy) -->
   <script src="/assets/vis-network.min.js"></script>
   <script src="/assets/network.js"></script>
@@ -17,7 +31,7 @@
     To host this frontend separately (S3 / Azure Blob / an internal page) and
     point it at an API on another origin, set this BEFORE app.js loads:
         <script>window.WORDNET_API_BASE = "https://wordnet-api.corp";</script>
-    Leave unset to call the same origin (single-container deployment).
+    Leave unset to call the same origin (single-container / Vercel deployment).
   -->
 </head>
 <body>
@@ -66,11 +80,14 @@
     <main class="main">
       <div class="topbar">
         <div id="scope" class="scope">Loading…</div>
-        <div class="metrics">
-          <div class="metric"><span id="m-scope">–</span><label>in scope</label></div>
-          <div class="metric"><span id="m-nodes">–</span><label>terms</label></div>
-          <div class="metric"><span id="m-edges">–</span><label>connections</label></div>
-          <div class="metric"><span id="m-clusters">–</span><label>clusters</label></div>
+        <div class="topbar-right">
+          <div class="metrics">
+            <div class="metric"><span id="m-scope">–</span><label>in scope</label></div>
+            <div class="metric"><span id="m-nodes">–</span><label>terms</label></div>
+            <div class="metric"><span id="m-edges">–</span><label>connections</label></div>
+            <div class="metric"><span id="m-clusters">–</span><label>clusters</label></div>
+          </div>
+          <button id="theme-toggle" class="theme-btn" title="Toggle light/dark mode">🌙</button>
         </div>
       </div>
 
@@ -100,6 +117,6 @@
 
   <div id="busy" class="busy" hidden><div class="spinner"></div></div>
 
-  <script src="/static/app.js"></script>
+  <script src="/web/app.js"></script>
 </body>
 </html>

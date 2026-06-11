@@ -1,0 +1,4 @@
+# Extra dependencies for the original Streamlit front end (app.py) only.
+# Install alongside the core set:
+#   pip install -r requirements.txt -r requirements-streamlit.txt
+streamlit>=1.37

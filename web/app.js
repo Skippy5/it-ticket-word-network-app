@@ -25,7 +25,19 @@
     lastResp: null,
     filterEls: {},             // column -> { details, list }
     filterCols: [],
+    // Uploaded CSVs, kept client-side and sent inline with every compute
+    // request: on stateless hosting (e.g. Vercel serverless) the next call
+    // can hit a fresh instance, so the server must never need to remember.
+    uploadedRecords: {},       // dataset_id -> [row objects]
   };
+
+  // For uploaded datasets, include the rows inline (see uploadedRecords).
+  function datasetBody(extra) {
+    const body = Object.assign({ dataset_id: state.datasetId }, extra);
+    const recs = state.uploadedRecords[state.datasetId];
+    if (recs) body.records = recs;
+    return body;
+  }
 
   /* ------------------------------------------------------------------ */
   /* API helpers                                                         */
@@ -269,7 +281,22 @@
   /* ------------------------------------------------------------------ */
   /* Static events                                                       */
   /* ------------------------------------------------------------------ */
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem("wordnet-theme", t); } catch (e) {}
+    const btn = $("#theme-toggle");
+    btn.textContent = t === "dark" ? "☀️" : "🌙";
+    btn.title = "Switch to " + (t === "dark" ? "light" : "dark") + " mode";
+    // restyle the canvas-drawn colors (labels/edges) to the new palette
+    if (state.controller && state.controller.refreshTheme) state.controller.refreshTheme();
+  }
+
   function wireStaticEvents() {
+    // initial icon reflects the theme set by the bootstrap script in <head>
+    applyTheme(document.documentElement.dataset.theme || "light");
+    $("#theme-toggle").onclick = () => {
+      applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+    };
     $("#dataset").onchange = onDatasetChange;
     $("#reset-filters").onclick = () => {
       state.filters = {};
@@ -301,6 +328,7 @@
         throw new Error(d);
       }
       const info = await res.json();
+      if (info.records) state.uploadedRecords[info.dataset_id] = info.records;
       const sel = $("#dataset");
       const o = document.createElement("option");
       o.value = info.dataset_id;
@@ -325,15 +353,14 @@
     const seq = ++pending;
     busy(true);
     try {
-      const resp = await api("/api/network", {
-        dataset_id: state.datasetId,
+      const resp = await api("/api/network", datasetBody({
         filters: state.filters,
         text_columns: state.textColumns,
         params: state.params,
         extra_stopwords: state.extraStopwords,
         synonyms: state.synonyms,
         url_template: state.urlTemplate,
-      });
+      }));
       if (seq !== pending) return;          // a newer request superseded this one
       state.lastResp = resp;
       render(resp);
@@ -425,7 +452,7 @@
       try {
         const res = await fetch(API + "/api/incidents.csv", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dataset_id: state.datasetId, filters: state.filters }),
+          body: JSON.stringify(datasetBody({ filters: state.filters })),
         });
         const text = await res.text();
         download("incidents_in_scope.csv", text, "text/csv");

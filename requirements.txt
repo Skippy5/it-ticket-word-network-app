@@ -1,17 +1,21 @@
-# --- analytics engine (shared by Streamlit app, CLI, and the web API) ---
+# Slim by design: this is everything the engine + web API need, and it is what
+# Vercel installs for the serverless function — keep heavyweight packages out
+# so the bundle stays under the platform's 250 MB function limit.
+# (scipy/scikit-learn were removed: co-occurrence is numpy matmul, and the
+# English stop-word list is vendored in english_stopwords.py.)
+
+# --- analytics engine (shared by all front ends) ---
 pandas>=2.0
 numpy>=1.26
-scipy>=1.11
-scikit-learn>=1.4
 networkx>=3.2
 
-# --- decoupled web API + static frontend (api.py) ---
+# --- decoupled web API (server.py / api/index.py) ---
 fastapi>=0.110
-uvicorn[standard]>=0.29
+uvicorn>=0.29
 python-multipart>=0.0.9
 
-# --- original Streamlit front end (app.py); not needed for the web/API build ---
-streamlit>=1.37
+# --- Streamlit front end (app.py) is an extra; it is NOT needed for the web
+#     or Vercel builds:  pip install -r requirements-streamlit.txt
 
 # Optional (better lemmatization). The app runs fine without these — it falls
 # back to a corpus-checked rule lemmatizer. To enable spaCy:

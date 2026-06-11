@@ -1,5 +1,6 @@
-# Python virtual environment
+# Python virtual environments
 .venv/
+.venv-slim/
 venv/
 env/
 

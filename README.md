@@ -13,8 +13,11 @@ front ends** — pick whichever fits where you're hosting:
 | Front end | Best for | Live filter/upload? | Hosting |
 |---|---|---|---|
 | **Streamlit** (`app.py`) | quickest local/exploratory use | yes | a persistent process (Streamlit Cloud, Render, a VM, or a container) |
-| **Decoupled web** (`api.py` + `web/`) | **internal AWS/Azure hosting & embedding into pages** | yes | static frontend anywhere + a containerized API |
+| **Decoupled web** (`server.py` + `web/`) | **Vercel, internal AWS/Azure hosting & embedding into pages** | yes | Vercel (zero-config via `vercel.json`), or static frontend anywhere + a containerized API |
 | **Standalone HTML** (`cli.py`) | drop a snapshot onto any page / S3 / Blob / SharePoint | no (fixed snapshot) | none — a single self-contained file |
+
+The decoupled web build has a **light/dark mode toggle** (top right); the saved
+preference persists, defaulting to your OS color scheme.
 
 All three render the **same** vis-network graph and drill-in, because they share
 one renderer (`assets/network.js` + `assets/network.css`) and one payload
@@ -25,6 +28,14 @@ builder (`viz.build_graph_payload`).
 ```powershell
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
+```
+
+`requirements.txt` is deliberately slim (pandas/numpy/networkx/FastAPI — no
+scipy or scikit-learn) so the same set deploys to serverless hosts. The
+Streamlit front end is an extra:
+
+```powershell
+.venv\Scripts\pip install -r requirements-streamlit.txt
 ```
 
 Optional (better lemmatization — the app works without it via a built-in
@@ -62,15 +73,15 @@ This is the build to use when you need to host on internal infrastructure and/or
 - **`web/`** — a static frontend (HTML/JS/CSS + vis.js). Pure files: host them on
   S3 + CloudFront, Azure Blob static website, an internal web server, or embed
   into an existing page. The graph + drill-in run entirely client-side.
-- **`api.py`** — a FastAPI compute service (reuses the engine via `service.py`).
+- **`server.py`** — a FastAPI compute service (reuses the engine via `service.py`).
   It does the preprocessing / co-occurrence / PMI / Louvain and returns graph
-  JSON. Runs as a normal container behind your load balancer / API gateway /
-  SSO.
+  JSON. Runs as a container behind your load balancer / API gateway / SSO, or
+  as a Vercel serverless function (`api/index.py` imports the same app).
 
 ### Run locally (one process serves both)
 
 ```powershell
-.venv\Scripts\python -m uvicorn api:app --port 8000
+.venv\Scripts\python -m uvicorn server:app --port 8000
 ```
 
 Open http://localhost:8000 — the API also serves the `web/` frontend, so a
@@ -86,6 +97,29 @@ docker run -p 8000:8000 ticket-word-network
 ```
 
 The image honors `$PORT` (set by many PaaS) and binds `0.0.0.0`.
+
+### Deploy to Vercel
+
+The repo is Vercel-ready — import it and deploy, no settings needed:
+
+1. [vercel.com/new](https://vercel.com/new) → import the GitHub repo.
+2. Leave **Framework Preset = Other** and all build settings empty.
+3. Deploy.
+
+What happens: Vercel serves `web/` and `assets/` as static files, and
+`vercel.json` routes `/` to the frontend and every `/api/*` call to a Python
+serverless function (`api/index.py`) wrapping the same FastAPI app.
+`requirements.txt` is slim by design so the function bundle stays well under
+Vercel's 250 MB limit.
+
+Serverless caveats (by design, already handled):
+
+- **Uploads are stateless**: the parsed rows are returned to the browser and
+  sent back inline with each compute request, so any instance can serve any
+  call. Practical upload ceiling is a few MB of CSV (platform request-body
+  limit ~4.5 MB); bigger files belong on the container deployment.
+- **Cold starts**: the first request after idle takes a few extra seconds
+  (pandas import + sample load); warm requests compute in ~1–3 s.
 
 ### Deploy to AWS / Azure
 
@@ -112,14 +146,16 @@ The image honors `$PORT` (set by many PaaS) and binds `0.0.0.0`.
 | `GET /api/health` | liveness + loaded sample list |
 | `GET /api/config` | defaults, stop words, synonym map, URL template |
 | `GET /api/datasets` | bundled sample datasets |
-| `POST /api/upload` | upload CSV(s) → ephemeral `dataset_id` |
+| `POST /api/upload` | parse CSV(s) → `dataset_id` **+ the parsed rows** |
 | `POST /api/options` | cascading filter option lists for a selection |
 | `POST /api/network` | full graph payload + stats + clusters + export tables |
 | `POST /api/incidents.csv` | filtered incident list as CSV |
 
-> Uploads are held in memory per running instance (stateless compute otherwise).
-> For multi-instance / serverless deployments, back uploads with a shared store
-> (S3 / Blob / Redis) — see the note in `api.py`.
+> Every compute endpoint accepts either a `dataset_id` (bundled samples) or the
+> rows inline as `records` — the frontend resends uploaded rows with each
+> request, so the API needs no per-instance memory and runs unchanged on
+> serverless hosting. (A best-effort in-memory upload cache still speeds up
+> long-running container deployments.)
 
 ## How it works
 
@@ -138,14 +174,17 @@ CSV -> filter population -> per-ticket document (chosen text columns)
 | File | Role |
 |---|---|
 | `preprocess.py` | cleaning, tokenizing, synonyms, lemmatization, phrases, stop words |
-| `cooccurrence.py` | sparse co-occurrence matrix, PMI, pruning, graph build |
+| `english_stopwords.py` | vendored standard English stop-word list (drops the sklearn dependency) |
+| `cooccurrence.py` | numpy co-occurrence matrix (`X.T @ X`), PMI, pruning, graph build |
 | `clustering.py` | Louvain communities (networkx built-in, seeded) |
 | `drilldown.py` | term→incidents and edge→incidents lookups, export tables |
 | `viz.py` | payload builder + self-contained HTML (inlines the shared assets) |
 | `config.py` | stop words, synonym map, seed phrases, defaults, URL template |
 | `service.py` | stateless orchestration (filter → pipeline → graph → payload) shared by the API |
 | `app.py` | **Streamlit** front end: upload, filters, parameters, stats, exports |
-| `api.py` | **FastAPI** compute API + optional static hosting of `web/` |
+| `server.py` | **FastAPI** compute API + optional static hosting of `web/` (`api.py` is a back-compat shim) |
+| `api/index.py` | **Vercel** serverless entrypoint (imports the same FastAPI app) |
+| `vercel.json` | Vercel routing: static `web/`+`assets/`, `/api/*` → the function |
 | `web/` | **static frontend** (`index.html`, `app.js`, `styles.css`) for the decoupled build |
 | `assets/` | shared renderer (`network.js`, `network.css`) + vendored `vis-network.min.js` |
 | `cli.py` | one-shot standalone `network.html` generator |

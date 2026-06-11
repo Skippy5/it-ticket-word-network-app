@@ -1,39 +1,93 @@
 /* Shared styles for the interactive co-occurrence network component.
    Used by both the Streamlit component (viz.py inlines this) and the static
    web frontend (web/index.html links it). Class-scoped so multiple network
-   instances can coexist on one page. */
+   instances can coexist on one page.
+
+   Theming: colors go through --wn-* variables with light defaults on :root.
+   A host page that sets <html data-theme="dark"> gets the dark palette; the
+   Streamlit component never sets the attribute, so it stays light. The
+   --wn-canvas / --wn-node-label / --wn-edge* / --wn-fade* variables are also
+   read by network.js for the canvas-drawn colors. */
+
+:root {
+  --wn-canvas: #fafbfc;
+  --wn-panel: #ffffff;
+  --wn-panel-soft: #f6f8fa;
+  --wn-panel-hover: #e8ecf0;
+  --wn-border: #d7dbe0;
+  --wn-btn-border: #c4c9d0;
+  --wn-row-border: #eceff2;
+  --wn-text: #1c2733;
+  --wn-text-soft: #30363d;
+  --wn-muted: #7a838f;
+  --wn-muted-strong: #5a6472;
+  --wn-accent: #1a66cc;
+  --wn-legend-bg: rgba(255, 255, 255, .93);
+  --wn-tooltip-bg: #ffffff;
+  --wn-tooltip-text: #222222;
+  /* canvas-drawn colors (read by network.js) */
+  --wn-node-label: #1c2733;
+  --wn-edge: #b8c1cc;
+  --wn-edge-highlight: #444455;
+  --wn-fade: #e3e7eb;
+  --wn-fade-label: #b9c0c8;
+}
+
+[data-theme="dark"] {
+  --wn-canvas: #161c24;
+  --wn-panel: #1b222c;
+  --wn-panel-soft: #232b37;
+  --wn-panel-hover: #2c3542;
+  --wn-border: #313b48;
+  --wn-btn-border: #3b4654;
+  --wn-row-border: #2a3340;
+  --wn-text: #e2e8f0;
+  --wn-text-soft: #c6cfd9;
+  --wn-muted: #8b95a3;
+  --wn-muted-strong: #a4afbc;
+  --wn-accent: #6ca6ff;
+  --wn-legend-bg: rgba(27, 34, 44, .93);
+  --wn-tooltip-bg: #222b36;
+  --wn-tooltip-text: #dfe6ee;
+  --wn-node-label: #e2e8f0;
+  --wn-edge: #4f5a68;
+  --wn-edge-highlight: #aab8cc;
+  --wn-fade: #2a313b;
+  --wn-fade-label: #555f6b;
+}
 
 .wn-wrap { display:flex; gap:10px; height:100%; min-height:0;
            font-family:"Segoe UI",system-ui,sans-serif; }
-.wn-graphbox { flex:1 1 auto; border:1px solid #d7dbe0; border-radius:8px;
-               background:#fafbfc; position:relative; min-width:0; }
+.wn-graphbox { flex:1 1 auto; border:1px solid var(--wn-border); border-radius:8px;
+               background:var(--wn-canvas); position:relative; min-width:0; }
 .wn-net  { position:absolute; inset:0; }
-.wn-side { flex:0 0 clamp(200px, 30%, 340px); border:1px solid #d7dbe0; border-radius:8px;
-           padding:10px 12px; overflow-y:auto; background:#fff; font-size:13px; }
+.wn-side { flex:0 0 clamp(200px, 30%, 340px); border:1px solid var(--wn-border); border-radius:8px;
+           padding:10px 12px; overflow-y:auto; background:var(--wn-panel);
+           color:var(--wn-text); font-size:13px; }
 .wn-toolbar { position:absolute; top:8px; left:8px; z-index:5; display:flex; gap:6px; }
-.wn-btn { font-size:12px; padding:3px 10px; border:1px solid #c4c9d0;
-          border-radius:6px; background:#fff; cursor:pointer; }
-.wn-btn:hover { background:#eef1f4; }
-.wn-legend { position:absolute; bottom:8px; left:8px; z-index:5; background:rgba(255,255,255,.93);
-             border:1px solid #d7dbe0; border-radius:8px; padding:6px 10px;
-             font-size:11.5px; max-width:46%; max-height:38%; overflow-y:auto; }
+.wn-btn { font-size:12px; padding:3px 10px; border:1px solid var(--wn-btn-border);
+          border-radius:6px; background:var(--wn-panel); color:var(--wn-text); cursor:pointer; }
+.wn-btn:hover { background:var(--wn-panel-hover); }
+.wn-legend { position:absolute; bottom:8px; left:8px; z-index:5; background:var(--wn-legend-bg);
+             border:1px solid var(--wn-border); border-radius:8px; padding:6px 10px;
+             color:var(--wn-text); font-size:11.5px; max-width:46%; max-height:38%; overflow-y:auto; }
 .wn-legend-row { display:flex; align-items:baseline; gap:6px; margin:2px 0; }
 .wn-dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; align-self:center; }
 .wn-side-title { font-weight:600; font-size:14px; margin-bottom:2px; }
-.wn-side-sub { color:#5a6472; margin-bottom:8px; }
-.wn-tk { border-top:1px solid #eceff2; padding:6px 0; }
+.wn-side-sub { color:var(--wn-muted-strong); margin-bottom:8px; }
+.wn-tk { border-top:1px solid var(--wn-row-border); padding:6px 0; }
 .wn-tk-id { font-family:Consolas,monospace; font-size:12.5px; font-weight:600; }
-.wn-tk-id a { color:#1a66cc; text-decoration:none; }
+.wn-tk-id a { color:var(--wn-accent); text-decoration:none; }
 .wn-tk-id a:hover { text-decoration:underline; }
-.wn-copy { font-size:10.5px; padding:1px 6px; margin-left:6px; border:1px solid #c4c9d0;
-           border-radius:4px; background:#f6f8fa; cursor:pointer; }
-.wn-copy:hover { background:#e8ecf0; }
-.wn-tk-desc { color:#30363d; margin-top:1px; }
-.wn-tk-meta { color:#7a838f; font-size:11px; margin-top:1px; }
-.wn-hint { color:#7a838f; }
+.wn-copy { font-size:10.5px; padding:1px 6px; margin-left:6px; border:1px solid var(--wn-btn-border);
+           border-radius:4px; background:var(--wn-panel-soft); color:var(--wn-text); cursor:pointer; }
+.wn-copy:hover { background:var(--wn-panel-hover); }
+.wn-tk-desc { color:var(--wn-text-soft); margin-top:1px; }
+.wn-tk-meta { color:var(--wn-muted); font-size:11px; margin-top:1px; }
+.wn-hint { color:var(--wn-muted); }
 .wn-pill { display:inline-block; padding:1px 8px; border-radius:10px;
            color:#fff; font-size:11px; margin-left:4px; }
-div.vis-tooltip { position:absolute; background:#fff; border:1px solid #c4c9d0;
+div.vis-tooltip { position:absolute; background:var(--wn-tooltip-bg); border:1px solid var(--wn-btn-border);
                   border-radius:6px; padding:8px 10px; font-family:"Segoe UI",sans-serif;
-                  font-size:12px; color:#222; box-shadow:0 2px 8px rgba(0,0,0,.12);
+                  font-size:12px; color:var(--wn-tooltip-text); box-shadow:0 2px 8px rgba(0,0,0,.12);
                   max-width:280px; white-space:normal; z-index:10; }

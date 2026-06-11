@@ -9,14 +9,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install deps first for layer caching. (Streamlit in requirements is unused by
-# the API; drop it from requirements.txt if you want a slimmer image.)
+# Install deps first for layer caching (requirements.txt is the slim set —
+# the Streamlit front end is a separate extra not needed in this image).
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # App code + engine + assets + frontend + sample data
-COPY config.py preprocess.py cooccurrence.py clustering.py drilldown.py \
-     viz.py service.py api.py ./
+COPY config.py english_stopwords.py preprocess.py cooccurrence.py \
+     clustering.py drilldown.py viz.py service.py server.py api.py ./
 COPY assets/ ./assets/
 COPY web/ ./web/
 COPY data/ ./data/
@@ -25,4 +25,4 @@ EXPOSE 8000
 
 # Lock down cross-origin embedding in production via, e.g.:
 #   -e WORDNET_CORS_ORIGINS="https://portal.corp,https://intranet.corp"
-CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}"]
