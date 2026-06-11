@@ -7,6 +7,19 @@ graph (count or positive-PMI weighted), clusters it with Louvain, and renders a
 force-directed network where **every node and edge drills back to the exact
 incident numbers** that produced it.
 
+The analytics engine is plain Python and is reused by **three interchangeable
+front ends** — pick whichever fits where you're hosting:
+
+| Front end | Best for | Live filter/upload? | Hosting |
+|---|---|---|---|
+| **Streamlit** (`app.py`) | quickest local/exploratory use | yes | a persistent process (Streamlit Cloud, Render, a VM, or a container) |
+| **Decoupled web** (`api.py` + `web/`) | **internal AWS/Azure hosting & embedding into pages** | yes | static frontend anywhere + a containerized API |
+| **Standalone HTML** (`cli.py`) | drop a snapshot onto any page / S3 / Blob / SharePoint | no (fixed snapshot) | none — a single self-contained file |
+
+All three render the **same** vis-network graph and drill-in, because they share
+one renderer (`assets/network.js` + `assets/network.css`) and one payload
+builder (`viz.build_graph_payload`).
+
 ## Setup
 
 ```powershell
@@ -41,6 +54,73 @@ sample under **Sample dataset** (in `data/`) or upload your own CSV(s).
 `network.html` is fully self-contained (vis-network is inlined) — share it by
 sending the file.
 
+## Decoupled web build (API + static frontend) — for internal AWS/Azure hosting
+
+This is the build to use when you need to host on internal infrastructure and/or
+**embed the network into existing pages/portals**. It splits cleanly:
+
+- **`web/`** — a static frontend (HTML/JS/CSS + vis.js). Pure files: host them on
+  S3 + CloudFront, Azure Blob static website, an internal web server, or embed
+  into an existing page. The graph + drill-in run entirely client-side.
+- **`api.py`** — a FastAPI compute service (reuses the engine via `service.py`).
+  It does the preprocessing / co-occurrence / PMI / Louvain and returns graph
+  JSON. Runs as a normal container behind your load balancer / API gateway /
+  SSO.
+
+### Run locally (one process serves both)
+
+```powershell
+.venv\Scripts\python -m uvicorn api:app --port 8000
+```
+
+Open http://localhost:8000 — the API also serves the `web/` frontend, so a
+single container is enough for a simple deployment.
+
+### Run as a container
+
+```bash
+docker build -t ticket-word-network .
+docker run -p 8000:8000 ticket-word-network
+# lock down cross-origin embedding in production:
+#   -e WORDNET_CORS_ORIGINS="https://portal.corp,https://intranet.corp"
+```
+
+The image honors `$PORT` (set by many PaaS) and binds `0.0.0.0`.
+
+### Deploy to AWS / Azure
+
+- **AWS:** push the image to ECR, run it on **ECS/Fargate** or **App Runner**
+  (both take a container + port directly). Put it behind an ALB; use ALB OIDC or
+  Cognito for SSO.
+- **Azure:** push to ACR, run on **Azure Container Apps** or **App Service for
+  Containers**; front it with Application Gateway / APIM and Entra ID for SSO.
+- **Split hosting (most embeddable):** deploy only `api.py` as the container,
+  and host `web/` + `assets/` as static files (S3 / Blob / your portal). In the
+  page, set the API origin before `app.js` loads and let CORS allow it:
+
+  ```html
+  <script>window.WORDNET_API_BASE = "https://wordnet-api.corp";</script>
+  ```
+
+  An embedding page can also drive the graph after load via the exposed handle,
+  e.g. `window.wordnet.showNode("outlook")`.
+
+### API endpoints
+
+| Method · path | Purpose |
+|---|---|
+| `GET /api/health` | liveness + loaded sample list |
+| `GET /api/config` | defaults, stop words, synonym map, URL template |
+| `GET /api/datasets` | bundled sample datasets |
+| `POST /api/upload` | upload CSV(s) → ephemeral `dataset_id` |
+| `POST /api/options` | cascading filter option lists for a selection |
+| `POST /api/network` | full graph payload + stats + clusters + export tables |
+| `POST /api/incidents.csv` | filtered incident list as CSV |
+
+> Uploads are held in memory per running instance (stateless compute otherwise).
+> For multi-instance / serverless deployments, back uploads with a shared store
+> (S3 / Blob / Redis) — see the note in `api.py`.
+
 ## How it works
 
 ```
@@ -57,14 +137,19 @@ CSV -> filter population -> per-ticket document (chosen text columns)
 
 | File | Role |
 |---|---|
-| `app.py` | Streamlit UI: upload, filters, parameters, stats, exports |
 | `preprocess.py` | cleaning, tokenizing, synonyms, lemmatization, phrases, stop words |
 | `cooccurrence.py` | sparse co-occurrence matrix, PMI, pruning, graph build |
 | `clustering.py` | Louvain communities (networkx built-in, seeded) |
 | `drilldown.py` | term→incidents and edge→incidents lookups, export tables |
-| `viz.py` | vis-network HTML component (click/hover/drill-in/highlight) |
+| `viz.py` | payload builder + self-contained HTML (inlines the shared assets) |
 | `config.py` | stop words, synonym map, seed phrases, defaults, URL template |
+| `service.py` | stateless orchestration (filter → pipeline → graph → payload) shared by the API |
+| `app.py` | **Streamlit** front end: upload, filters, parameters, stats, exports |
+| `api.py` | **FastAPI** compute API + optional static hosting of `web/` |
+| `web/` | **static frontend** (`index.html`, `app.js`, `styles.css`) for the decoupled build |
+| `assets/` | shared renderer (`network.js`, `network.css`) + vendored `vis-network.min.js` |
 | `cli.py` | one-shot standalone `network.html` generator |
+| `Dockerfile` | container for the API + static frontend (ECS/Fargate, Container Apps) |
 | `data/` | sample CSVs (small / large / multidept / messy) |
 
 ## Filters

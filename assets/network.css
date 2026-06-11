@@ -1,0 +1,39 @@
+/* Shared styles for the interactive co-occurrence network component.
+   Used by both the Streamlit component (viz.py inlines this) and the static
+   web frontend (web/index.html links it). Class-scoped so multiple network
+   instances can coexist on one page. */
+
+.wn-wrap { display:flex; gap:10px; height:100%; min-height:0;
+           font-family:"Segoe UI",system-ui,sans-serif; }
+.wn-graphbox { flex:1 1 auto; border:1px solid #d7dbe0; border-radius:8px;
+               background:#fafbfc; position:relative; min-width:0; }
+.wn-net  { position:absolute; inset:0; }
+.wn-side { flex:0 0 clamp(200px, 30%, 340px); border:1px solid #d7dbe0; border-radius:8px;
+           padding:10px 12px; overflow-y:auto; background:#fff; font-size:13px; }
+.wn-toolbar { position:absolute; top:8px; left:8px; z-index:5; display:flex; gap:6px; }
+.wn-btn { font-size:12px; padding:3px 10px; border:1px solid #c4c9d0;
+          border-radius:6px; background:#fff; cursor:pointer; }
+.wn-btn:hover { background:#eef1f4; }
+.wn-legend { position:absolute; bottom:8px; left:8px; z-index:5; background:rgba(255,255,255,.93);
+             border:1px solid #d7dbe0; border-radius:8px; padding:6px 10px;
+             font-size:11.5px; max-width:46%; max-height:38%; overflow-y:auto; }
+.wn-legend-row { display:flex; align-items:baseline; gap:6px; margin:2px 0; }
+.wn-dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; align-self:center; }
+.wn-side-title { font-weight:600; font-size:14px; margin-bottom:2px; }
+.wn-side-sub { color:#5a6472; margin-bottom:8px; }
+.wn-tk { border-top:1px solid #eceff2; padding:6px 0; }
+.wn-tk-id { font-family:Consolas,monospace; font-size:12.5px; font-weight:600; }
+.wn-tk-id a { color:#1a66cc; text-decoration:none; }
+.wn-tk-id a:hover { text-decoration:underline; }
+.wn-copy { font-size:10.5px; padding:1px 6px; margin-left:6px; border:1px solid #c4c9d0;
+           border-radius:4px; background:#f6f8fa; cursor:pointer; }
+.wn-copy:hover { background:#e8ecf0; }
+.wn-tk-desc { color:#30363d; margin-top:1px; }
+.wn-tk-meta { color:#7a838f; font-size:11px; margin-top:1px; }
+.wn-hint { color:#7a838f; }
+.wn-pill { display:inline-block; padding:1px 8px; border-radius:10px;
+           color:#fff; font-size:11px; margin-left:4px; }
+div.vis-tooltip { position:absolute; background:#fff; border:1px solid #c4c9d0;
+                  border-radius:6px; padding:8px 10px; font-family:"Segoe UI",sans-serif;
+                  font-size:12px; color:#222; box-shadow:0 2px 8px rgba(0,0,0,.12);
+                  max-width:280px; white-space:normal; z-index:10; }

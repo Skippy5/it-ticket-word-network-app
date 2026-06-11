@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IT Ticket Word Co-occurrence Network</title>
+
+  <!-- Shared network component (same renderer the Streamlit build uses) -->
+  <link rel="stylesheet" href="/assets/network.css" />
+  <!-- Frontend chrome -->
+  <link rel="stylesheet" href="/static/styles.css" />
+  <!-- vis-network (inlined offline copy) -->
+  <script src="/assets/vis-network.min.js"></script>
+  <script src="/assets/network.js"></script>
+
+  <!--
+    To host this frontend separately (S3 / Azure Blob / an internal page) and
+    point it at an API on another origin, set this BEFORE app.js loads:
+        <script>window.WORDNET_API_BASE = "https://wordnet-api.corp";</script>
+    Leave unset to call the same origin (single-container deployment).
+  -->
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Ticket Word Network</h1>
+
+      <section>
+        <label class="lbl">Dataset</label>
+        <select id="dataset" class="ctrl"></select>
+        <label class="lbl mt">Upload CSV(s)</label>
+        <input type="file" id="upload" class="ctrl" accept=".csv" multiple />
+        <div id="upload-status" class="hint"></div>
+      </section>
+
+      <section>
+        <label class="lbl">Text columns <span class="hint-inline">(1 ticket = 1 document)</span></label>
+        <div id="text-columns" class="checks"></div>
+      </section>
+
+      <section>
+        <div class="sec-head">
+          <span class="lbl">Filters</span>
+          <button id="reset-filters" class="link-btn">Reset</button>
+        </div>
+        <div id="filters"></div>
+      </section>
+
+      <details class="adv">
+        <summary>Network parameters</summary>
+        <div id="params"></div>
+      </details>
+
+      <details class="adv">
+        <summary>Stop words &amp; synonyms</summary>
+        <label class="lbl">Extra stop words</label>
+        <textarea id="stopwords" class="ctrl mono" rows="5"></textarea>
+        <label class="lbl mt">Synonym map <span class="hint-inline">(from =&gt; to)</span></label>
+        <textarea id="synonyms" class="ctrl mono" rows="6"></textarea>
+        <label class="lbl mt">Ticket URL template</label>
+        <input type="text" id="url-template" class="ctrl mono" />
+        <button id="apply-text" class="apply-btn">Apply</button>
+      </details>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div id="scope" class="scope">Loading…</div>
+        <div class="metrics">
+          <div class="metric"><span id="m-scope">–</span><label>in scope</label></div>
+          <div class="metric"><span id="m-nodes">–</span><label>terms</label></div>
+          <div class="metric"><span id="m-edges">–</span><label>connections</label></div>
+          <div class="metric"><span id="m-clusters">–</span><label>clusters</label></div>
+        </div>
+      </div>
+
+      <div id="message" class="message" hidden></div>
+
+      <div id="network" class="network-host"></div>
+
+      <div class="bottom">
+        <details class="panel" open>
+          <summary>Clusters</summary>
+          <div id="clusters" class="cluster-table"></div>
+        </details>
+        <details class="panel">
+          <summary>Export</summary>
+          <div class="exports">
+            <button data-export="nodes" class="exp-btn">Nodes CSV</button>
+            <button data-export="edges" class="exp-btn">Edges CSV</button>
+            <button data-export="incidents" class="exp-btn">Filtered incidents CSV</button>
+            <button data-export="graph" class="exp-btn">Graph JSON</button>
+          </div>
+          <div class="hint">Edges CSV includes the co-occurring incident IDs per
+            connection; nodes CSV includes every incident ID per term — full traceability.</div>
+        </details>
+      </div>
+    </main>
+  </div>
+
+  <div id="busy" class="busy" hidden><div class="spinner"></div></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
