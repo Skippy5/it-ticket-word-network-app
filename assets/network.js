@@ -110,16 +110,23 @@
       interaction: { hover: true, tooltipDelay: 120, multiselect: false },
     });
 
-    /* ---------- legend ---------- */
-    legendEl.appendChild(el("div", { style: "font-weight:600;margin-bottom:2px" }, "Clusters"));
-    DATA.legend.forEach((c) => {
-      const row = el("div", { class: "wn-legend-row" });
-      const dot = el("span", { class: "wn-dot" }); dot.style.background = c.color;
-      row.appendChild(dot);
-      row.appendChild(el("span", null,
-        "C" + c.id + " (" + c.size + "): " + c.top_terms.join(", ")));
-      legendEl.appendChild(row);
-    });
+    /* ---------- legend (optional on-map cluster key) ----------
+       Hidden when opts.showLegend === false (e.g. the web build, which shows a
+       dedicated Clusters panel below the map). Defaults to on so the
+       self-contained HTML export keeps an on-map cluster key. */
+    if (opts.showLegend === false) {
+      legendEl.remove();
+    } else {
+      legendEl.appendChild(el("div", { style: "font-weight:600;margin-bottom:2px" }, "Clusters"));
+      DATA.legend.forEach((c) => {
+        const row = el("div", { class: "wn-legend-row" });
+        const dot = el("span", { class: "wn-dot" }); dot.style.background = c.color;
+        row.appendChild(dot);
+        row.appendChild(el("span", null,
+          "C" + c.id + " (" + c.size + "): " + c.top_terms.join(", ")));
+        legendEl.appendChild(row);
+      });
+    }
 
     /* ---------- side panel / drill-in ---------- */
     function copyText(text, btn) {

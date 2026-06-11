@@ -369,7 +369,9 @@
       const h = host.clientHeight > 80 ? host.clientHeight : 600;
       // controller is exposed on window.wordnet so an embedding page can drive
       // the graph (e.g. wordnet.showNode("outlook")) and for testing.
-      state.controller = window.wordnet = window.mountNetwork(host, resp.payload, { height: h });
+      // showLegend:false — the on-map cluster key is redundant with the
+      // Clusters panel below the map in this build.
+      state.controller = window.wordnet = window.mountNetwork(host, resp.payload, { height: h, showLegend: false });
     } else {
       host.innerHTML = "";
       state.controller = window.wordnet = null;
