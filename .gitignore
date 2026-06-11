@@ -22,3 +22,9 @@ out_*.html
 .idea/
 .DS_Store
 Thumbs.db
+.vercel/
+
+# Local vercel/uv build artifacts (regenerated from requirements.txt)
+.python-version
+pyproject.toml
+uv.lock

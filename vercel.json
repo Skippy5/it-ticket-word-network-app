@@ -3,7 +3,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "includeFiles": "**"
+      "includeFiles": "{server.py,config.py,english_stopwords.py,preprocess.py,cooccurrence.py,clustering.py,drilldown.py,viz.py,service.py,data/**}"
     }
   },
   "rewrites": [
