@@ -102,6 +102,9 @@ textarea.ctrl { resize: vertical; }
   position: fixed; inset: 0; background: rgba(244,246,248,.45);
   display: flex; align-items: center; justify-content: center; z-index: 50;
 }
+/* The author `display:flex` above otherwise overrides the UA `[hidden]` rule,
+   leaving the overlay permanently on screen. This makes `hidden` actually hide. */
+.busy[hidden] { display: none; }
 .spinner {
   width: 34px; height: 34px; border: 3px solid #c9d2db; border-top-color: #1a66cc;
   border-radius: 50%; animation: spin .8s linear infinite;

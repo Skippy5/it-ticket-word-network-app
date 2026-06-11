@@ -455,7 +455,10 @@
   /* ------------------------------------------------------------------ */
   /* Misc helpers                                                        */
   /* ------------------------------------------------------------------ */
-  function showMessage(t) { const m = $("#message"); m.textContent = t; m.hidden = false; }
+  function showMessage(t) {
+    const m = $("#message"); m.textContent = t; m.hidden = false;
+    busyDepth = 0; $("#busy").hidden = true;   // never leave the veil over an error
+  }
   function hideMessage() { $("#message").hidden = true; }
   function sameArray(a, b) { return a.length === b.length && a.every((x, i) => x === b[i]); }
   function escapeHtml(s) { return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
