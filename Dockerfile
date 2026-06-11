@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # App code + engine + assets + frontend + sample data
 COPY config.py english_stopwords.py preprocess.py cooccurrence.py \
-     clustering.py drilldown.py viz.py service.py server.py api.py ./
+     clustering.py drilldown.py viz.py service.py server.py ./
 COPY assets/ ./assets/
 COPY web/ ./web/
 COPY data/ ./data/

@@ -128,8 +128,9 @@ Serverless caveats (by design, already handled):
   Cognito for SSO.
 - **Azure:** push to ACR, run on **Azure Container Apps** or **App Service for
   Containers**; front it with Application Gateway / APIM and Entra ID for SSO.
-- **Split hosting (most embeddable):** deploy only `api.py` as the container,
-  and host `web/` + `assets/` as static files (S3 / Blob / your portal). In the
+- **Split hosting (most embeddable):** deploy only the API (`server.py`) as the
+  container, and host `web/` + `assets/` as static files (S3 / Blob / your
+  portal). In the
   page, set the API origin before `app.js` loads and let CORS allow it:
 
   ```html
@@ -182,7 +183,7 @@ CSV -> filter population -> per-ticket document (chosen text columns)
 | `config.py` | stop words, synonym map, seed phrases, defaults, URL template |
 | `service.py` | stateless orchestration (filter → pipeline → graph → payload) shared by the API |
 | `app.py` | **Streamlit** front end: upload, filters, parameters, stats, exports |
-| `server.py` | **FastAPI** compute API + optional static hosting of `web/` (`api.py` is a back-compat shim) |
+| `server.py` | **FastAPI** compute API + optional static hosting of `web/` |
 | `api/index.py` | **Vercel** serverless entrypoint (imports the same FastAPI app) |
 | `vercel.json` | Vercel routing: static `web/`+`assets/`, `/api/*` → the function |
 | `web/` | **static frontend** (`index.html`, `app.js`, `styles.css`) for the decoupled build |
