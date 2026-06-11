@@ -1,0 +1,23 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Generated network exports (produced by cli.py / the app)
+network.html
+out_*.html
+*.tmp
+
+# Tooling / editor
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+streamlit>=1.37
+pandas>=2.0
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.4
+networkx>=3.2
+
+# Optional (better lemmatization). The app runs fine without these — it falls
+# back to a corpus-checked rule lemmatizer. To enable spaCy:
+#   pip install spacy
+#   python -m spacy download en_core_web_sm
+# spacy>=3.7
